@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <vector>
 #include <cassert>
+#include <map>
 
 void printVector(std::vector<int> vect)
 {
@@ -77,7 +78,7 @@ void findLongestConsecutiveMatching(
 	int vector1Size = vector1.size();
 	int vector2Size = vector2.size();
 
-	std::vector<std::vector<int>> longestCommonSubLengths(vector1Size + 1, std::vector<int>(vector2Size + 1, 0));
+	std::vector<std::vector<int>> longestCommonSuffixLengths(vector1Size + 1, std::vector<int>(vector2Size + 1, 0));
 
 	longestLengthFound = 0;
 	iLongestStartPositionVect1 = -1;
@@ -89,10 +90,10 @@ void findLongestConsecutiveMatching(
 		{
 			if (vector1[i - 1] == vector2[j - 1]) 
 			{
-				longestCommonSubLengths[i][j] = longestCommonSubLengths[i - 1][j - 1] + 1;
-				if (longestCommonSubLengths[i][j] > longestLengthFound) 
+				longestCommonSuffixLengths[i][j] = longestCommonSuffixLengths[i - 1][j - 1] + 1;
+				if (longestCommonSuffixLengths[i][j] > longestLengthFound) 
 				{
-					longestLengthFound = longestCommonSubLengths[i][j];
+					longestLengthFound = longestCommonSuffixLengths[i][j];
 					iLongestStartPositionVect1 = i - longestLengthFound;
 					iLongestStartPositionVect2 = j - longestLengthFound;
 				}
@@ -101,8 +102,8 @@ void findLongestConsecutiveMatching(
 	}
 }
 
-
-int minPieces(const std::vector<int>& original, const std::vector<int>& desired)
+// n^3 complexity - n complexity recursion + n^2 findLongestConsecutiveMatching
+int minPieces_INEFFICIENT(const std::vector<int>& original, const std::vector<int>& desired)
 {
 	// we may have multiple candidates, some with different number of cuts
 	/*
@@ -147,8 +148,43 @@ int minPieces(const std::vector<int>& original, const std::vector<int>& desired)
 		originalLeft.assign(original.begin(), original.begin() + longestOriginalStartPos);
 		originalRight.assign(original.begin() + longestOriginalStartPos + longestFound, original.end());
 
-		return 1 + minPieces(originalLeft, desired) + minPieces(originalRight, desired);
+		return 1 + minPieces_INEFFICIENT(originalLeft, desired) + minPieces_INEFFICIENT(originalRight, desired);
 	}
+}
+
+// n complexity
+int minPieces(const std::vector<int>& original, const std::vector<int>& desired)
+{
+	// count the number of cuts
+	std::map<int, int> positions;
+	for (int i = 0; i < original.size(); i++)
+	{
+		positions[original[i]] = i;
+	}
+
+	int cuts = 0;
+	int i = 0;
+	// for each number in `desired`, find it's position in `original` using the `positions` map 
+	while (i < desired.size())
+	{
+		int current = positions[desired[i]];	// `desired` mapped to `original`
+		i++;
+		while (i < desired.size())
+		{
+			if (positions[desired[i]] == current + 1)
+			{
+				current = positions[desired[i]];
+				i++;
+			}
+			else
+			{
+				break;
+			}
+		}	// when the while loop ends, we no longer have consecutive values in both, so time to make a cut
+		cuts++;
+	}
+
+	return cuts;
 }
 
 int main()
@@ -170,7 +206,7 @@ int main()
 		// (1, 2, 3, 4, 5)
 		int result = minPieces(original, desired);
 		std::cout << "Scenario 1 Result: " << result << std::endl;
-		assert(result == 0); // a bit of ambiguity here - it's 1 piece but 0 "cut pieces" as the question phrases it
+		assert(result == 1); // a bit of ambiguity here - it's 1 piece but 0 "cut pieces" as the question phrases it
 	}
 
 	// Scenario 2: Reversed Order
@@ -225,15 +261,7 @@ int main()
 		desired = { 1 };
 		result = minPieces(original, desired);
 		std::cout << "Scenario 6 (single element) Result: " << result << std::endl;
-		assert(result == 0);
+		assert(result == 1);
 	}
 
 }
-
-/*
-
-1,2,3,4,5,6,7,8,9 // ori
-
-9,8,7,1,2,3,6,5,4 // des
-
-*/
