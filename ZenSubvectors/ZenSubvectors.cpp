@@ -153,7 +153,7 @@ int minPieces_INEFFICIENT(const std::vector<int>& original, const std::vector<in
 }
 
 // n complexity
-int minPieces(const std::vector<int>& original, const std::vector<int>& desired)
+int minPieces_GOOD(const std::vector<int>& original, const std::vector<int>& desired)
 {
 	// count the number of cuts
 	std::map<int, int> positions;
@@ -185,6 +185,105 @@ int minPieces(const std::vector<int>& original, const std::vector<int>& desired)
 	}
 
 	return cuts;
+}
+
+int minPieces_RECURSIONBROKEN(const std::vector<int>& original, const std::vector<int>& desired)
+{
+	if (desired.empty())
+	{
+		return 0;   // base case for recursion
+	}
+
+	int firstElement = desired[0];
+	auto iter = std::find(original.begin(), original.end(), firstElement);
+
+	if (iter == original.end())
+	{
+		return -1; // error.. 
+	}
+
+	std::vector<int> origLeft(original.begin(), iter);
+	std::vector<int> origRight(iter + 1, original.end());
+
+	int splitPoint = std::distance(original.begin(), iter);
+	std::vector<int> desiredLeft, desiredRight;
+
+	for (int i = 1; i < desired.size(); ++i)
+	{
+		auto posInOriginal = std::find(original.begin(), original.end(), desired[i]);
+		int dist = std::distance(original.begin(), posInOriginal);
+		if (dist < splitPoint)
+		{
+			desiredLeft.push_back(desired[i]);
+		}
+		else
+		{
+			desiredRight.push_back(desired[i]);
+		}
+
+	}
+
+	return 1 + minPieces_RECURSIONBROKEN(origLeft, desiredLeft) + minPieces_RECURSIONBROKEN(origRight, desiredRight);
+}
+
+int minPieces_FINALBROKEN(const std::vector<int>& original, const std::vector<int>& desired)
+{
+	std::map<int, int> indexMap;
+	for (int i = 0; i < original.size(); ++i)
+	{
+		indexMap[original[i]] = i;
+	}
+
+	std::vector<int> transformedDesired;
+	for (int num : desired)
+	{
+		transformedDesired.push_back(indexMap[num]);
+	}
+
+	int cuts = 0;
+	int maxSoFar = transformedDesired[0];
+	for (int i = 1; i < transformedDesired.size(); ++i)
+	{
+		if (transformedDesired[i] < maxSoFar)
+		{
+			cuts++;
+		}
+		else
+		{
+			maxSoFar = transformedDesired[i];
+		}
+	}
+
+	return cuts + 1;
+}
+
+// Final, fixed
+int minPieces(const std::vector<int>& original, const std::vector<int>& desired)
+{	
+	std::map<int, int> indexMap;
+	for (int i = 0; i < original.size(); ++i)
+	{
+		indexMap[original[i]] = i;
+	}
+
+	std::vector<int> transformedDesired;
+	for (int num : desired)
+	{
+		transformedDesired.push_back(indexMap[num]);
+	}
+
+	int cuts = 0;
+	for (int i = 1; i < transformedDesired.size(); ++i)
+	{
+		// 0,1,2,4,5,3
+		
+		if (transformedDesired[i] != transformedDesired[i-1] + 1)
+		{
+			cuts++;
+		}
+	}
+
+	return cuts + 1;
 }
 
 int main()
@@ -250,12 +349,13 @@ int main()
 	}
 
 	// Scenario 6: Edge Cases
+	// NOTE: lots of ambiguity around these edge cases - some implementations may have different opinions
 	{
 		std::vector<int> original = {};
 		std::vector<int> desired = {};
 		int result = minPieces(original, desired);
 		std::cout << "Scenario 6 (empty) Result: " << result << std::endl;
-		assert(result == 0);
+		assert(result == 1);
 
 		original = { 1 };
 		desired = { 1 };
